@@ -46,7 +46,8 @@ Platform ini memungkinkan pengguna umum untuk mencari dan melihat detail toko ku
 │   ├── dashboard.css
 │   ├── detail.css
 │   ├── index.css
-│   └── toko_form.css
+│   ├── toko_form.css
+│   └── logo.png
 │
 ├── config.php            # File koneksi PDO ke MySQL Database
 ├── dashboard.php         # Halaman utama Admin (List Toko)
