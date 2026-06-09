@@ -31,10 +31,19 @@ if (!empty($_GET['id_jenis'])) {
     $params['id_jenis'] = $_GET['id_jenis'];
 }
 
-// Filter berdasarkan Jam Operasional (Fitur baru)
-if (!empty($_GET['id_jadwal'])) {
-    $query .= " AND t.id_jadwal = :id_jadwal";
-    $params['id_jadwal'] = $_GET['id_jadwal'];
+// Filter berdasarkan Jam Spesifik (Input Time)
+if (!empty($_GET['jam_spesifik'])) {
+    // Tambahkan detik agar formatnya sesuai dengan tipe TIME di database (HH:MM:00)
+    $jam_pencarian = $_GET['jam_spesifik'] . ':00'; 
+    
+    // Logika ini menangani toko yang buka normal (pagi ke malam) 
+    // maupun toko yang buka melewati tengah malam (malam ke pagi)
+    $query .= " AND (
+        (jd.buka <= jd.tutup AND :jam_pencarian BETWEEN jd.buka AND jd.tutup)
+        OR 
+        (jd.buka > jd.tutup AND (:jam_pencarian >= jd.buka OR :jam_pencarian <= jd.tutup))
+    )";
+    $params['jam_pencarian'] = $jam_pencarian;
 }
 
 // Filter berdasarkan rentang harga menu kelipatan 20.000
@@ -102,24 +111,23 @@ $list_toko = $stmt->fetchAll();
                     <?php endforeach; ?>
                 </select>
 
-                <select name="id_jadwal">
-                    <option value="">Semua Jam Operasional</option>
-                    <?php foreach($list_jadwal as $jd): ?>
-                    <option value="<?= $jd['id_jadwal'] ?>"
-                        <?= (($_GET['id_jadwal'] ?? '') == $jd['id_jadwal']) ? 'selected' : '' ?>>
-                        🕒 <?= substr($jd['buka'], 0, 5) ?> - <?= substr($jd['tutup'], 0, 5) ?> WIB
-                    </option>
-                    <?php endforeach; ?>
-                </select>
+                <input type="time" name="jam_spesifik" value="<?= htmlspecialchars($_GET['jam_spesifik'] ?? '') ?>"
+                    title="Cari toko yang buka di jam ini">
 
                 <select name="range_harga">
                     <option value="">Semua Range Harga</option>
-                    <option value="0_20" <?= (($_GET['range_harga'] ?? '') == '0_20') ? 'selected' : '' ?>>Di bawah Rp 20.000</option>
-                    <option value="20_40" <?= (($_GET['range_harga'] ?? '') == '20_40') ? 'selected' : '' ?>>Rp 20.000 - Rp 40.000</option>
-                    <option value="40_60" <?= (($_GET['range_harga'] ?? '') == '40_60') ? 'selected' : '' ?>>Rp 40.000 - Rp 60.000</option>
-                    <option value="60_80" <?= (($_GET['range_harga'] ?? '') == '60_80') ? 'selected' : '' ?>>Rp 60.000 - Rp 80.000</option>
-                    <option value="80_100" <?= (($_GET['range_harga'] ?? '') == '80_100') ? 'selected' : '' ?>>Rp 80.000 - Rp 100.000</option>
-                    <option value="100_above" <?= (($_GET['range_harga'] ?? '') == '100_above') ? 'selected' : '' ?>>Di atas Rp 100.000</option>
+                    <option value="0_20" <?= (($_GET['range_harga'] ?? '') == '0_20') ? 'selected' : '' ?>>Di bawah Rp
+                        20.000</option>
+                    <option value="20_40" <?= (($_GET['range_harga'] ?? '') == '20_40') ? 'selected' : '' ?>>Rp 20.000 -
+                        Rp 40.000</option>
+                    <option value="40_60" <?= (($_GET['range_harga'] ?? '') == '40_60') ? 'selected' : '' ?>>Rp 40.000 -
+                        Rp 60.000</option>
+                    <option value="60_80" <?= (($_GET['range_harga'] ?? '') == '60_80') ? 'selected' : '' ?>>Rp 60.000 -
+                        Rp 80.000</option>
+                    <option value="80_100" <?= (($_GET['range_harga'] ?? '') == '80_100') ? 'selected' : '' ?>>Rp 80.000
+                        - Rp 100.000</option>
+                    <option value="100_above" <?= (($_GET['range_harga'] ?? '') == '100_above') ? 'selected' : '' ?>>Di
+                        atas Rp 100.000</option>
                 </select>
 
                 <button type="submit" class="btn-search">Filter</button>
@@ -144,7 +152,8 @@ $list_toko = $stmt->fetchAll();
             </div>
             <?php endforeach; ?>
             <?php else: ?>
-            <p style="grid-column: 1/-1; text-align: center; color: #888; padding: 40px 0;">Tidak ada toko yang sesuai dengan filter pencarian.</p>
+            <p style="grid-column: 1/-1; text-align: center; color: #888; padding: 40px 0;">Tidak ada toko yang sesuai
+                dengan filter pencarian.</p>
             <?php endif; ?>
         </div>
     </main>
@@ -154,4 +163,5 @@ $list_toko = $stmt->fetchAll();
     </footer>
 
 </body>
+
 </html>
