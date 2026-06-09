@@ -42,28 +42,7 @@ $list_menu = $menu_stmt->fetchAll();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Detail Toko - <?= htmlspecialchars($toko['nama_toko']) ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
-        body { background-color: #F4F4F4; color: #333; padding-bottom: 50px; }
-        .container { width: 85%; max-width: 1100px; margin: 0 auto; padding-top: 30px; }
-        .btn-back { display: inline-block; background: #667302; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 5px; font-weight: 600; margin-bottom: 20px; }
-        
-        .grid-detail { display: grid; grid-template-columns: 1fr 2fr; gap: 30px; }
-        .sidebar-info { background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); height: fit-content; }
-        .sidebar-info h1 { color: #400101; font-size: 26px; margin-bottom: 15px; }
-        .info-block { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
-        .info-block h4 { color: #667302; margin-bottom: 5px; font-size: 14px; text-transform: uppercase; }
-        
-        .main-content { background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        .main-content h2 { color: #400101; border-bottom: 3px solid #667302; padding-bottom: 10px; margin-bottom: 20px; }
-        
-        .menu-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .menu-table th, .menu-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; }
-        .menu-table th { background-color: #f9f9f9; color: #400101; font-weight: 600; }
-        .menu-table tr:hover { background-color: #fdfdfd; }
-        .price { font-weight: bold; color: #400101; }
-        .cat-badge { background: #E0F7FA; color: #006064; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
-    </style>
+    <link rel="stylesheet" href="css/detail.css">
 </head>
 <body>
 

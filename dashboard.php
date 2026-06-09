@@ -18,32 +18,7 @@ $list_toko = $stmt->fetchAll();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard UMKM</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>
-        * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; }
-        body { background-color: #f4f6f9; display: flex; min-height: 100vh; }
-        
-        .sidebar { width: 250px; background: #400101; color: #fff; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
-        .sidebar h2 { font-size: 20px; text-align: center; margin-bottom: 30px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; }
-        .sidebar a { color: #D9D9D9; text-decoration: none; padding: 12px; display: block; border-radius: 6px; font-weight: 500; margin-bottom: 10px; }
-        .sidebar a:hover, .sidebar a.active { background: #667302; color: #fff; }
-        .btn-logout { background: #d32f2f !important; text-align: center; margin-top: auto; }
-
-        .content { flex: 1; padding: 40px; }
-        .header-content { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-        .header-content h1 { color: #333; font-size: 28px; }
-        
-        .btn-add { background-color: #667302; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 14px; }
-        .btn-add:hover { background-color: #400101; }
-
-        .dash-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .dash-table th, .dash-table td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
-        .dash-table th { background-color: #eee; color: #333; font-weight: 600; }
-        
-        .btn-action { text-decoration: none; padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; display: inline-block; margin-right: 5px; }
-        .btn-edit { background: #FFF3E0; color: #E65100; }
-        .btn-delete { background: #FFEBEE; color: #C62828; }
-        .btn-menu { background: #E8F5E9; color: #2E7D32; }
-    </style>
+    <link rel="stylesheet" href="css/dashboard.css">
 </head>
 <body>
 

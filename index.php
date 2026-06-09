@@ -5,6 +5,10 @@ require_once 'config.php';
 $jenis_stmt = $pdo->query("SELECT * FROM jenis");
 $list_jenis = $jenis_stmt->fetchAll();
 
+// Ambil data jadwal operasional untuk dropdown filter baru
+$jadwal_stmt = $pdo->query("SELECT * FROM jadwal");
+$list_jadwal = $jadwal_stmt->fetchAll();
+
 // Bangun query filter pencarian toko
 $query = "SELECT t.*, j.nama_jenis, s.value_sertifikasi, jd.buka, jd.tutup 
             FROM toko t
@@ -25,6 +29,12 @@ if (!empty($_GET['keyword'])) {
 if (!empty($_GET['id_jenis'])) {
     $query .= " AND t.id_jenis = :id_jenis";
     $params['id_jenis'] = $_GET['id_jenis'];
+}
+
+// Filter berdasarkan Jam Operasional (Fitur baru)
+if (!empty($_GET['id_jadwal'])) {
+    $query .= " AND t.id_jadwal = :id_jadwal";
+    $params['id_jadwal'] = $_GET['id_jadwal'];
 }
 
 // Filter berdasarkan rentang harga menu kelipatan 20.000
@@ -56,203 +66,14 @@ $list_toko = $stmt->fetchAll();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Katalog Kuliner UMKM</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Poppins', sans-serif;
-        }
-
-        body {
-            background-color: #F4F4F4;
-            color: #333;
-            line-height: 1.6;
-        }
-
-        .container {
-            width: 85%;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px 0;
-        }
-
-        header {
-            background-color: #667302;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .navbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 0;
-        }
-
-        .logo {
-            color: #D9D9D9;
-            font-size: 24px;
-            font-weight: 700;
-            text-decoration: none;
-        }
-
-        .logo span {
-            color: #A9BF04;
-        }
-
-        .nav-links {
-            list-style: none;
-            display: flex;
-            gap: 25px;
-            align-items: center;
-        }
-
-        .nav-links a {
-            color: #D9D9D9;
-            font-weight: 500;
-            text-decoration: none;
-        }
-
-        .nav-links a:hover {
-            color: #A9BF04;
-        }
-
-        .btn-admin {
-            background-color: #400101;
-            color: #fff !important;
-            padding: 8px 16px;
-            border-radius: 5px;
-        }
-
-        .search-box {
-            background: #fff;
-            padding: 30px;
-            border-radius: 12px;
-            margin: 30px 0;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-        }
-
-        .search-form {
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr auto;
-            gap: 15px;
-        }
-
-        .search-form input,
-        .search-form select {
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 14px;
-            outline: none;
-        }
-
-        .btn-search {
-            background-color: #667302;
-            color: #fff;
-            border: none;
-            padding: 0 25px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-
-        .btn-search:hover {
-            background-color: #400101;
-        }
-
-        .product-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-        }
-
-        .product-card {
-            background: #ffffff;
-            border-radius: 12px;
-            overflow: hidden;
-            border: 1px solid #e0e0e0;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            transition: 0.3s;
-        }
-
-        .product-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .product-info {
-            padding: 25px;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 600;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-        }
-
-        .badge-jenis {
-            background: #E8F5E9;
-            color: #2E7D32;
-        }
-
-        .badge-halal {
-            background: #FFF3E0;
-            color: #E65100;
-        }
-
-        .product-info h3 {
-            color: #400101;
-            font-size: 20px;
-            margin-bottom: 10px;
-        }
-
-        .product-meta {
-            font-size: 13px;
-            color: #666;
-            margin-bottom: 15px;
-        }
-
-        .btn-detail {
-            display: block;
-            text-align: center;
-            background-color: #667302;
-            color: #fff;
-            padding: 12px;
-            border-radius: 0 0 12px 12px;
-            font-weight: 600;
-            text-decoration: none;
-        }
-
-        .btn-detail:hover {
-            background-color: #400101;
-        }
-
-        footer {
-            background-color: #400101;
-            color: #D9D9D9;
-            text-align: center;
-            padding: 20px 0;
-            margin-top: 50px;
-            font-size: 14px;
-        }
-    </style>
+    <link rel="stylesheet" href="css/index.css">
 </head>
 
 <body>
 
     <header>
         <div class="container navbar">
-            <a href="index.php" class="logo">UMKM<span>Kuliner</span></a>
+            <a href="index.php" class="logo">UMKM<span>TUBES</span></a>
             <ul class="nav-links">
                 <li><a href="index.php">Beranda</a></li>
                 <li>
@@ -260,7 +81,6 @@ $list_toko = $stmt->fetchAll();
                     <a href="dashboard.php" class="btn-admin">Dashboard Admin</a>
                     <?php else: ?>
                     <a href="login.php" class="btn-admin">Login Admin</a>
-                    <?php collapse_all_sections: true; $_SESSION['admin'] = null; // helper placeholder ?>
                     <?php endif; ?>
                 </li>
             </ul>
@@ -282,20 +102,24 @@ $list_toko = $stmt->fetchAll();
                     <?php endforeach; ?>
                 </select>
 
+                <select name="id_jadwal">
+                    <option value="">Semua Jam Operasional</option>
+                    <?php foreach($list_jadwal as $jd): ?>
+                    <option value="<?= $jd['id_jadwal'] ?>"
+                        <?= (($_GET['id_jadwal'] ?? '') == $jd['id_jadwal']) ? 'selected' : '' ?>>
+                        🕒 <?= substr($jd['buka'], 0, 5) ?> - <?= substr($jd['tutup'], 0, 5) ?> WIB
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+
                 <select name="range_harga">
                     <option value="">Semua Range Harga</option>
-                    <option value="0_20" <?= (($_GET['range_harga'] ?? '') == '0_20') ? 'selected' : '' ?>>Di bawah Rp
-                        20.000</option>
-                    <option value="20_40" <?= (($_GET['range_harga'] ?? '') == '20_40') ? 'selected' : '' ?>>Rp 20.000 -
-                        Rp 40.000</option>
-                    <option value="40_60" <?= (($_GET['range_harga'] ?? '') == '40_60') ? 'selected' : '' ?>>Rp 40.000 -
-                        Rp 60.000</option>
-                    <option value="60_80" <?= (($_GET['range_harga'] ?? '') == '60_80') ? 'selected' : '' ?>>Rp 60.000 -
-                        Rp 80.000</option>
-                    <option value="80_100" <?= (($_GET['range_harga'] ?? '') == '80_100') ? 'selected' : '' ?>>Rp 80.000
-                        - Rp 100.000</option>
-                    <option value="100_above" <?= (($_GET['range_harga'] ?? '') == '100_above') ? 'selected' : '' ?>>Di
-                        atas Rp 100.000</option>
+                    <option value="0_20" <?= (($_GET['range_harga'] ?? '') == '0_20') ? 'selected' : '' ?>>Di bawah Rp 20.000</option>
+                    <option value="20_40" <?= (($_GET['range_harga'] ?? '') == '20_40') ? 'selected' : '' ?>>Rp 20.000 - Rp 40.000</option>
+                    <option value="40_60" <?= (($_GET['range_harga'] ?? '') == '40_60') ? 'selected' : '' ?>>Rp 40.000 - Rp 60.000</option>
+                    <option value="60_80" <?= (($_GET['range_harga'] ?? '') == '60_80') ? 'selected' : '' ?>>Rp 60.000 - Rp 80.000</option>
+                    <option value="80_100" <?= (($_GET['range_harga'] ?? '') == '80_100') ? 'selected' : '' ?>>Rp 80.000 - Rp 100.000</option>
+                    <option value="100_above" <?= (($_GET['range_harga'] ?? '') == '100_above') ? 'selected' : '' ?>>Di atas Rp 100.000</option>
                 </select>
 
                 <button type="submit" class="btn-search">Filter</button>
@@ -320,16 +144,14 @@ $list_toko = $stmt->fetchAll();
             </div>
             <?php endforeach; ?>
             <?php else: ?>
-            <p style="grid-column: 1/-1; text-align: center; color: #888; padding: 40px 0;">Tidak ada toko yang sesuai
-                dengan filter pencarian.</p>
+            <p style="grid-column: 1/-1; text-align: center; color: #888; padding: 40px 0;">Tidak ada toko yang sesuai dengan filter pencarian.</p>
             <?php endif; ?>
         </div>
     </main>
 
     <footer>
-        <p>&copy; 2026 Katalog Kuliner UMKM. Terhubung Langsung ke Database Anda.</p>
+        <p>&copy; 2026 Katalog Kuliner UMKM. Untuk TUBES SMBD Kelompok 2</p>
     </footer>
 
 </body>
-
 </html>

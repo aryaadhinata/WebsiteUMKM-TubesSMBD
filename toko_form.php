@@ -4,36 +4,104 @@ if (!isset($_SESSION['admin'])) { header("Location: login.php"); exit; }
 
 $id = $_GET['id'] ?? null;
 $toko = null;
+$existing_kontak = [];
+$existing_metode = [];
+$existing_mitra = [];
 
-// Jika mode Edit, ambil data toko lama
+// Ambil opsi master untuk dropdown/checkbox form
+$list_sertifikasi = $pdo->query("SELECT * FROM sertifikasi_halal")->fetchAll();
+$list_jenis = $pdo->query("SELECT * FROM jenis")->fetchAll();
+$list_jadwal = $pdo->query("SELECT * FROM jadwal")->fetchAll();
+$all_metode = $pdo->query("SELECT * FROM metode_pembayaran")->fetchAll();
+$all_mitra = $pdo->query("SELECT * FROM mitra")->fetchAll();
+
+// Jika mode Edit, ambil semua data lama (termasuk relasinya)
 if ($id) {
     $stmt = $pdo->prepare("SELECT * FROM toko WHERE id_toko = ?");
     $stmt->execute([$id]);
     $toko = $stmt->fetch();
-}
 
-// Ambil opsi master untuk dropdown form
-$list_sertifikasi = $pdo->query("SELECT * FROM sertifikasi_halal")->fetchAll();
-$list_jenis = $pdo->query("SELECT * FROM jenis")->fetchAll();
-$list_jadwal = $pdo->query("SELECT * FROM jadwal")->fetchAll();
+    if ($toko) {
+        // Ambil Kontak Lama
+        $stmt_k = $pdo->prepare("SELECT * FROM kontak WHERE id_toko = ?");
+        $stmt_k->execute([$id]);
+        foreach($stmt_k->fetchAll() as $k) {
+            $existing_kontak[$k['tipe_kontak']] = $k['value_kontak'];
+        }
+
+        // Ambil Metode Pembayaran Terpilih
+        $stmt_m = $pdo->prepare("SELECT id_metode FROM rel_metode_pembayaran WHERE id_toko = ?");
+        $stmt_m->execute([$id]);
+        $existing_metode = $stmt_m->fetchAll(PDO::FETCH_COLUMN);
+
+        // Ambil Mitra Pengiriman Terpilih
+        $stmt_mt = $pdo->prepare("SELECT id_mitra FROM rel_mitra WHERE id_toko = ?");
+        $stmt_mt->execute([$id]);
+        $existing_mitra = $stmt_mt->fetchAll(PDO::FETCH_COLUMN);
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nama_toko = $_POST['nama_toko'];
     $id_sertifikasi = $_POST['id_sertifikasi'];
     $id_jenis = $_POST['id_jenis'];
     $id_jadwal = $_POST['id_jadwal'];
+    
+    $kontak_post = $_POST['kontak'] ?? []; // Array asosiatif ['whatsapp' => '...', 'instagram' => '...']
+    $metode_post = $_POST['metode'] ?? []; // Array ID metode terpilih
+    $mitra_post = $_POST['mitra'] ?? [];   // Array ID mitra terpilih
 
-    if ($id) {
-        // SQL Edit Data
-        $update_stmt = $pdo->prepare("UPDATE toko SET nama_toko = ?, id_sertifikasi = ?, id_jenis = ?, id_jadwal = ? WHERE id_toko = ?");
-        $update_stmt->execute([$nama_toko, $id_sertifikasi, $id_jenis, $id_jadwal, $id]);
-    } else {
-        // SQL Tambah Baru
-        $insert_stmt = $pdo->prepare("INSERT INTO toko (nama_toko, id_sertifikasi, id_jenis, id_jadwal) VALUES (?, ?, ?, ?)");
-        $insert_stmt->execute([$nama_toko, $id_sertifikasi, $id_jenis, $id_jadwal]);
+    // Jalankan Database Transaction agar eksekusi data relasional aman terjamin
+    $pdo->beginTransaction();
+    try {
+        if ($id) {
+            // 1. Update data dasar Toko
+            $update_stmt = $pdo->prepare("UPDATE toko SET nama_toko = ?, id_sertifikasi = ?, id_jenis = ?, id_jadwal = ? WHERE id_toko = ?");
+            $update_stmt->execute([$nama_toko, $id_sertifikasi, $id_jenis, $id_jadwal, $id]);
+            $id_toko = $id;
+
+            // Hapus relasi lama agar tidak duplikat saat ditimpa data baru
+            $pdo->prepare("DELETE FROM kontak WHERE id_toko = ?")->execute([$id_toko]);
+            $pdo->prepare("DELETE FROM rel_metode_pembayaran WHERE id_toko = ?")->execute([$id_toko]);
+            $pdo->prepare("DELETE FROM rel_mitra WHERE id_toko = ?")->execute([$id_toko]);
+        } else {
+            // 1. Tambah Toko Baru
+            $insert_stmt = $pdo->prepare("INSERT INTO toko (nama_toko, id_sertifikasi, id_jenis, id_jadwal) VALUES (?, ?, ?, ?)");
+            $insert_stmt->execute([$nama_toko, $id_sertifikasi, $id_jenis, $id_jadwal]);
+            $id_toko = $pdo->lastInsertId();
+        }
+
+        // 2. Simpan Kontak Baru/Update jika diisi
+        $ins_kontak = $pdo->prepare("INSERT INTO kontak (id_toko, tipe_kontak, value_kontak) VALUES (?, ?, ?)");
+        foreach ($kontak_post as $tipe => $value) {
+            if (!empty(trim($value))) {
+                $ins_kontak->execute([$id_toko, $tipe, trim($value)]);
+            }
+        }
+
+        // 3. Simpan Relasi Metode Pembayaran
+        if (!empty($metode_post)) {
+            $ins_metode = $pdo->prepare("INSERT INTO rel_metode_pembayaran (id_toko, id_metode) VALUES (?, ?)");
+            foreach ($metode_post as $id_metode) {
+                $ins_metode->execute([$id_toko, $id_metode]);
+            }
+        }
+
+        // 4. Simpan Relasi Mitra Pengiriman
+        if (!empty($mitra_post)) {
+            $ins_mitra = $pdo->prepare("INSERT INTO rel_mitra (id_toko, id_mitra) VALUES (?, ?)");
+            foreach ($mitra_post as $id_mitra) {
+                $ins_mitra->execute([$id_toko, $id_mitra]);
+            }
+        }
+
+        $pdo->commit();
+        header("Location: dashboard.php");
+        exit;
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        die("Terjadi kegagalan sistem simpan: " . $e->getMessage());
     }
-    header("Location: dashboard.php");
-    exit;
 }
 ?>
 <!DOCTYPE html>
@@ -43,17 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $id ? 'Edit' : 'Tambah' ?> Toko UMKM</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; }
-        body { background-color: #f4f6f9; padding: 40px; }
-        .form-card { background: #fff; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        .form-card h2 { color: #400101; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 14px; }
-        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; outline: none; font-size: 14px; }
-        .btn-save { background-color: #667302; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; }
-        .btn-cancel { background-color: #aaa; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; margin-left: 10px; font-size: 14px; display: inline-block; }
-    </style>
+    <link rel="stylesheet" href="css/toko_form.css">
 </head>
 <body>
 
@@ -92,6 +150,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </option>
                     <?php endforeach; ?>
                 </select>
+            </div>
+
+            <hr style="margin: 25px 0; border: 0; border-top: 1px dashed #ccc;">
+
+            <div class="form-group">
+                <label>Kontak Resmi (WhatsApp)</label>
+                <input type="text" name="kontak[whatsapp]" value="<?= htmlspecialchars($existing_kontak['whatsapp'] ?? '') ?>" placeholder="Contoh: 08123456789">
+            </div>
+            <div class="form-group">
+                <label>Kontak Resmi (Instagram)</label>
+                <input type="text" name="kontak[instagram]" value="<?= htmlspecialchars($existing_kontak['instagram'] ?? '') ?>" placeholder="Contoh: @tokokuliner">
+            </div>
+
+            <div class="form-group">
+                <label>Metode Pembayaran Tersedia</label>
+                <div class="checkbox-group">
+                    <?php foreach($all_metode as $m): ?>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="metode[]" value="<?= $m['id_metode'] ?>" <?= in_array($m['id_metode'], $existing_metode) ? 'checked' : '' ?>> 
+                            <?= $m['nama_metode'] ?>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Mitra Pengiriman Online</label>
+                <div class="checkbox-group">
+                    <?php foreach($all_mitra as $mt): ?>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="mitra[]" value="<?= $mt['id_mitra'] ?>" <?= in_array($mt['id_mitra'], $existing_mitra) ? 'checked' : '' ?>> 
+                            <?= $mt['nama_mitra'] ?>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
             </div>
 
             <button type="submit" class="btn-save">Simpan Data</button>
