@@ -106,6 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -114,6 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/toko_form.css">
 </head>
+
 <body>
 
     <div class="form-card">
@@ -121,14 +123,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <form method="POST" action="">
             <div class="form-group">
                 <label>Nama Toko</label>
-                <input type="text" name="nama_toko" value="<?= htmlspecialchars($toko['nama_toko'] ?? '') ?>" required placeholder="Masukkan nama toko">
+                <input type="text" name="nama_toko" value="<?= htmlspecialchars($toko['nama_toko'] ?? '') ?>" required
+                    placeholder="Masukkan nama toko">
             </div>
 
             <div class="form-group">
                 <label>Sertifikasi Halal</label>
                 <select name="id_sertifikasi" required>
                     <?php foreach($list_sertifikasi as $s): ?>
-                        <option value="<?= $s['id_sertifikasi'] ?>" <?= (($toko['id_sertifikasi'] ?? '') == $s['id_sertifikasi']) ? 'selected' : '' ?>><?= $s['value_sertifikasi'] ?></option>
+                    <option value="<?= $s['id_sertifikasi'] ?>"
+                        <?= (($toko['id_sertifikasi'] ?? '') == $s['id_sertifikasi']) ? 'selected' : '' ?>>
+                        <?= $s['value_sertifikasi'] ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -137,7 +142,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label>Jenis Kuliner</label>
                 <select name="id_jenis" required>
                     <?php foreach($list_jenis as $j): ?>
-                        <option value="<?= $j['id_jenis'] ?>" <?= (($toko['id_jenis'] ?? '') == $j['id_jenis']) ? 'selected' : '' ?>><?= $j['nama_jenis'] ?></option>
+                    <option value="<?= $j['id_jenis'] ?>"
+                        <?= (($toko['id_jenis'] ?? '') == $j['id_jenis']) ? 'selected' : '' ?>><?= $j['nama_jenis'] ?>
+                    </option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -146,9 +153,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label>Jadwal Operasional</label>
                 <select name="id_jadwal" required>
                     <?php foreach($list_jadwal as $jd): ?>
-                        <option value="<?= $jd['id_jadwal'] ?>" <?= (($toko['id_jadwal'] ?? '') == $jd['id_jadwal']) ? 'selected' : '' ?>>
-                            🕒 Buka: <?= substr($jd['buka'],0,5) ?> - Tutup: <?= substr($jd['tutup'],0,5) ?>
-                        </option>
+                    <option value="<?= $jd['id_jadwal'] ?>"
+                        <?= (($toko['id_jadwal'] ?? '') == $jd['id_jadwal']) ? 'selected' : '' ?>>
+                        🕒 Buka: <?= substr($jd['buka'],0,5) ?> - Tutup: <?= substr($jd['tutup'],0,5) ?>
+                    </option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -157,21 +165,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <div class="form-group">
                 <label>Kontak Resmi (WhatsApp)</label>
-                <input type="text" name="kontak[whatsapp]" value="<?= htmlspecialchars($existing_kontak['whatsapp'] ?? '') ?>" placeholder="Contoh: 08123456789">
+                <input type="text" name="kontak[telepon]"
+                    value="<?= htmlspecialchars($existing_kontak['telepon'] ?? '') ?>"
+                    placeholder="Contoh: 08123456789">
             </div>
             <div class="form-group">
                 <label>Kontak Resmi (Instagram)</label>
-                <input type="text" name="kontak[instagram]" value="<?= htmlspecialchars($existing_kontak['instagram'] ?? '') ?>" placeholder="Contoh: @tokokuliner">
+                <input type="text" name="kontak[instagram]"
+                    value="<?= htmlspecialchars($existing_kontak['instagram'] ?? '') ?>"
+                    placeholder="Contoh: @tokokuliner">
+            </div>
+            <div class="form-group">
+                <label>Kontak Resmi (Website)</label>
+                <input type="text" name="kontak[website]"
+                    value="<?= htmlspecialchars($existing_kontak['website'] ?? '') ?>"
+                    placeholder="Contoh: toko_kuliner.com">
             </div>
 
             <div class="form-group">
                 <label>Metode Pembayaran Tersedia</label>
                 <div class="checkbox-group">
                     <?php foreach($all_metode as $m): ?>
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="metode[]" value="<?= $m['id_metode'] ?>" <?= in_array($m['id_metode'], $existing_metode) ? 'checked' : '' ?>> 
-                            <?= $m['nama_metode'] ?>
-                        </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="metode[]" value="<?= $m['id_metode'] ?>"
+                            <?= in_array($m['id_metode'], $existing_metode) ? 'checked' : '' ?>>
+                        <?= $m['nama_metode'] ?>
+                    </label>
                     <?php endforeach; ?>
                 </div>
             </div>
@@ -180,10 +199,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label>Mitra Pengiriman Online</label>
                 <div class="checkbox-group">
                     <?php foreach($all_mitra as $mt): ?>
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="mitra[]" value="<?= $mt['id_mitra'] ?>" <?= in_array($mt['id_mitra'], $existing_mitra) ? 'checked' : '' ?>> 
-                            <?= $mt['nama_mitra'] ?>
-                        </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="mitra[]" value="<?= $mt['id_mitra'] ?>"
+                            <?= in_array($mt['id_mitra'], $existing_mitra) ? 'checked' : '' ?>>
+                        <?= $mt['nama_mitra'] ?>
+                    </label>
                     <?php endforeach; ?>
                 </div>
             </div>
@@ -194,4 +214,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
 </body>
+
 </html>

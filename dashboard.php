@@ -25,12 +25,12 @@ $query_jam = "SELECT t.nama_toko, jd.buka, jd.tutup,
             FROM toko t
             JOIN jadwal jd ON t.id_jadwal = jd.id_jadwal
             WHERE (
-                (jd.buka <= jd.tutup AND :jam_cek BETWEEN jd.buka AND jd.tutup)
+                (jd.buka <= jd.tutup AND :jam_cek1 BETWEEN jd.buka AND jd.tutup)
                 OR 
-                (jd.buka > jd.tutup AND (:jam_cek >= jd.buka OR :jam_cek <= jd.tutup))
+                (jd.buka > jd.tutup AND (:jam_cek2 >= jd.buka OR :jam_cek3 <= jd.tutup))
             )";
 $stmt_jam = $pdo->prepare($query_jam);
-$stmt_jam->execute(['jam_cek' => $jam_pencarian]);
+$stmt_jam->execute(['jam_cek1' => $jam_pencarian, 'jam_cek2' => $jam_pencarian, 'jam_cek3' => $jam_pencarian]);
 $umkm_buka = $stmt_jam->fetchAll();
 
 
@@ -123,8 +123,6 @@ $rasa_counts = $pdo->query("SELECT k.nama_kategori, COUNT(DISTINCT m.id_toko) as
 
                 <div class="stat-card" style="grid-column: 1 / -1;">
                     <h4>1. Status UMKM Buka Pada Jam Tertentu</h4>
-                    <div class="stat-card" style="grid-column: 1 / -1;">
-                        <h4>1. Status UMKM Buka Pada Jam Tertentu</h4>
                         <form method="GET" action=""
                             style="display:flex; gap:10px; align-items:center; margin-bottom:15px;">
                             <span style="font-size:14px;">Masukkan Jam Uji:</span>
@@ -161,7 +159,6 @@ $rasa_counts = $pdo->query("SELECT k.nama_kategori, COUNT(DISTINCT m.id_toko) as
                             </table>
                         </details>
                         <?php endif; ?>
-                    </div>
                 </div>
 
                 <div class="stat-card">
@@ -246,10 +243,10 @@ $rasa_counts = $pdo->query("SELECT k.nama_kategori, COUNT(DISTINCT m.id_toko) as
                             style="background: #eee; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: bold;"><?= $row['total_menu'] ?>
                             Item</span></td>
                     <td style="text-align: center;">
-                        <a href="menu_manage.php?id_toko=<?= $row['id_toko'] ?>" class=\"btn-action btn-menu\">🍱 Kelola
+                        <a href="menu_manage.php?id_toko=<?= $row['id_toko'] ?>" class="btn-action btn-menu">🍱 Kelola
                             Menu</a>
-                        <a href="toko_form.php?id=<?= $row['id_toko'] ?>" class=\"btn-action btn-edit\">✏️ Edit</a>
-                        <a href="toko_delete.php?id=<?= $row['id_toko'] ?>" class=\"btn-action btn-delete\"
+                        <a href="toko_form.php?id=<?= $row['id_toko'] ?>" class="btn-action btn-edit">✏️ Edit</a>
+                        <a href="toko_delete.php?id=<?= $row['id_toko'] ?>" class="btn-action btn-delete"
                             onclick="return confirm('Apakah Anda yakin ingin menghapus toko ini beserta relasi kontak, mitra, pembayaran, dan menunya?')">❌
                             Hapus</a>
                     </td>

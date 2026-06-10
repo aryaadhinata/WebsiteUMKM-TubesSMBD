@@ -39,11 +39,13 @@ if (!empty($_GET['jam_spesifik'])) {
     // Logika ini menangani toko yang buka normal (pagi ke malam) 
     // maupun toko yang buka melewati tengah malam (malam ke pagi)
     $query .= " AND (
-        (jd.buka <= jd.tutup AND :jam_pencarian BETWEEN jd.buka AND jd.tutup)
+        (jd.buka <= jd.tutup AND :jam_pencarian1 BETWEEN jd.buka AND jd.tutup)
         OR 
-        (jd.buka > jd.tutup AND (:jam_pencarian >= jd.buka OR :jam_pencarian <= jd.tutup))
+        (jd.buka > jd.tutup AND (:jam_pencarian2 >= jd.buka OR :jam_pencarian3 <= jd.tutup))
     )";
-    $params['jam_pencarian'] = $jam_pencarian;
+    $params['jam_pencarian1'] = $jam_pencarian;
+    $params['jam_pencarian2'] = $jam_pencarian;
+    $params['jam_pencarian3'] = $jam_pencarian;
 }
 
 // Filter berdasarkan rentang harga menu kelipatan 20.000
