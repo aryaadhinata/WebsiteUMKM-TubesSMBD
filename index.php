@@ -1,15 +1,9 @@
 <?php
 require_once 'config.php';
 
-// Ambil data jenis toko untuk dropdown filter
 $jenis_stmt = $pdo->query("SELECT * FROM jenis");
 $list_jenis = $jenis_stmt->fetchAll();
 
-// Ambil data jadwal operasional untuk dropdown filter baru
-$jadwal_stmt = $pdo->query("SELECT * FROM jadwal");
-$list_jadwal = $jadwal_stmt->fetchAll();
-
-// Bangun query filter pencarian toko
 $query = "SELECT t.*, j.nama_jenis, s.value_sertifikasi, jd.buka, jd.tutup 
             FROM toko t
             JOIN jenis j ON t.id_jenis = j.id_jenis
@@ -19,36 +13,26 @@ $query = "SELECT t.*, j.nama_jenis, s.value_sertifikasi, jd.buka, jd.tutup
 
 $params = [];
 
-// Filter berdasarkan nama/keyword
 if (!empty($_GET['keyword'])) {
     $query .= " AND t.nama_toko LIKE :keyword";
     $params['keyword'] = '%' . $_GET['keyword'] . '%';
 }
 
-// Filter berdasarkan Jenis Toko
 if (!empty($_GET['id_jenis'])) {
     $query .= " AND t.id_jenis = :id_jenis";
     $params['id_jenis'] = $_GET['id_jenis'];
 }
 
-// Filter berdasarkan Jam Spesifik (Input Time)
 if (!empty($_GET['jam_spesifik'])) {
-    // Tambahkan detik agar formatnya sesuai dengan tipe TIME di database (HH:MM:00)
     $jam_pencarian = $_GET['jam_spesifik'] . ':00'; 
-    
-    // Logika ini menangani toko yang buka normal (pagi ke malam) 
-    // maupun toko yang buka melewati tengah malam (malam ke pagi)
     $query .= " AND (
-        (jd.buka <= jd.tutup AND :jam_pencarian1 BETWEEN jd.buka AND jd.tutup)
+        (jd.buka <= jd.tutup AND :jam_pencarian BETWEEN jd.buka AND jd.tutup)
         OR 
-        (jd.buka > jd.tutup AND (:jam_pencarian2 >= jd.buka OR :jam_pencarian3 <= jd.tutup))
+        (jd.buka > jd.tutup AND (:jam_pencarian >= jd.buka OR :jam_pencarian <= jd.tutup))
     )";
-    $params['jam_pencarian1'] = $jam_pencarian;
-    $params['jam_pencarian2'] = $jam_pencarian;
-    $params['jam_pencarian3'] = $jam_pencarian;
+    $params['jam_pencarian'] = $jam_pencarian;
 }
 
-// Filter berdasarkan rentang harga menu kelipatan 20.000
 if (!empty($_GET['range_harga'])) {
     if ($_GET['range_harga'] == '0_20') {
         $query .= " AND EXISTS (SELECT 1 FROM menu WHERE id_toko = t.id_toko AND harga <= 20000)";
@@ -75,9 +59,8 @@ $list_toko = $stmt->fetchAll();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="css/logo.png" type="image/png">
     <title>Katalog Kuliner UMKM</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/index.css">
 </head>
 
@@ -162,7 +145,7 @@ $list_toko = $stmt->fetchAll();
     </main>
 
     <footer>
-        <p>&copy; 2026 Katalog Kuliner UMKM. Untuk TUBES SMBD Kelompok 2</p>
+        <p>&copy; 2026 Katalog Kuliner UMKM.</p>
     </footer>
 
 </body>

@@ -24,17 +24,19 @@ if ($id) {
         $p4 = $pdo->prepare("DELETE FROM menu WHERE id_toko = ?");
         $p4->execute([$id]);
 
-        // 5. Terakhir hapus entitas Toko utamanya
-        $p5 = $pdo->prepare("DELETE FROM toko WHERE id_toko = ?");
+        // 5. Jalankan Stored Procedure hapus_toko sesuai berkas SQL Anda
+        $p5 = $pdo->prepare("CALL hapus_toko(?)");
         $p5->execute([$id]);
 
         $pdo->commit();
+        header("Location: dashboard.php");
+        exit;
     } catch (Exception $e) {
         $pdo->rollBack();
         die("Gagal menghapus data toko secara aman: " . $e->getMessage());
     }
+} else {
+    header("Location: dashboard.php");
+    exit;
 }
-
-header("Location: dashboard.php");
-exit;
 ?>

@@ -41,37 +41,40 @@ if ($id) {
     }
 }
 
+$error_msg = '';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nama_toko = $_POST['nama_toko'];
     $id_sertifikasi = $_POST['id_sertifikasi'];
     $id_jenis = $_POST['id_jenis'];
     $id_jadwal = $_POST['id_jadwal'];
     
-    $kontak_post = $_POST['kontak'] ?? []; // Array asosiatif ['whatsapp' => '...', 'instagram' => '...']
-    $metode_post = $_POST['metode'] ?? []; // Array ID metode terpilih
-    $mitra_post = $_POST['mitra'] ?? [];   // Array ID mitra terpilih
+    // Logika ENUM sesuai db_umkm (1).sql: 'instagram', 'telepon', 'website'
+    $kontak_post = $_POST['kontak'] ?? []; 
+    $metode_post = $_POST['metode'] ?? []; 
+    $mitra_post = $_POST['mitra'] ?? [];   
 
-    // Jalankan Database Transaction agar eksekusi data relasional aman terjamin
+    // Jalankan Database Transaction agar eksekusi data relasi aman terjamin
     $pdo->beginTransaction();
     try {
         if ($id) {
-            // 1. Update data dasar Toko
+            // Update data dasar Toko
             $update_stmt = $pdo->prepare("UPDATE toko SET nama_toko = ?, id_sertifikasi = ?, id_jenis = ?, id_jadwal = ? WHERE id_toko = ?");
             $update_stmt->execute([$nama_toko, $id_sertifikasi, $id_jenis, $id_jadwal, $id]);
             $id_toko = $id;
 
-            // Hapus relasi lama agar tidak duplikat saat ditimpa data baru
+            // Hapus relasi lama agar tidak terjadi duplikasi saat ditimpa data baru
             $pdo->prepare("DELETE FROM kontak WHERE id_toko = ?")->execute([$id_toko]);
             $pdo->prepare("DELETE FROM rel_metode_pembayaran WHERE id_toko = ?")->execute([$id_toko]);
             $pdo->prepare("DELETE FROM rel_mitra WHERE id_toko = ?")->execute([$id_toko]);
         } else {
-            // 1. Tambah Toko Baru
+            // Tambah Toko Baru
             $insert_stmt = $pdo->prepare("INSERT INTO toko (nama_toko, id_sertifikasi, id_jenis, id_jadwal) VALUES (?, ?, ?, ?)");
             $insert_stmt->execute([$nama_toko, $id_sertifikasi, $id_jenis, $id_jadwal]);
             $id_toko = $pdo->lastInsertId();
         }
 
-        // 2. Simpan Kontak Baru/Update jika diisi
+        // Simpan Kontak Baru jika diisi (Logika ENUM dinamis)
         $ins_kontak = $pdo->prepare("INSERT INTO kontak (id_toko, tipe_kontak, value_kontak) VALUES (?, ?, ?)");
         foreach ($kontak_post as $tipe => $value) {
             if (!empty(trim($value))) {
@@ -79,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // 3. Simpan Relasi Metode Pembayaran
+        // Simpan Relasi Metode Pembayaran
         if (!empty($metode_post)) {
             $ins_metode = $pdo->prepare("INSERT INTO rel_metode_pembayaran (id_toko, id_metode) VALUES (?, ?)");
             foreach ($metode_post as $id_metode) {
@@ -87,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // 4. Simpan Relasi Mitra Pengiriman
+        // Simpan Relasi Mitra Pengiriman
         if (!empty($mitra_post)) {
             $ins_mitra = $pdo->prepare("INSERT INTO rel_mitra (id_toko, id_mitra) VALUES (?, ?)");
             foreach ($mitra_post as $id_mitra) {
@@ -100,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     } catch (Exception $e) {
         $pdo->rollBack();
-        die("Terjadi kegagalan sistem simpan: " . $e->getMessage());
+        $error_msg = "Terjadi kegagalan sistem simpan: " . $e->getMessage();
     }
 }
 ?>
@@ -110,7 +113,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="css/logo.png" type="image/png">
     <title><?= $id ? 'Edit' : 'Tambah' ?> Toko UMKM</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/toko_form.css">
@@ -120,6 +122,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <div class="form-card">
         <h2><?= $id ? '✏️ Edit Data' : '✨ Tambah Baru' ?> Toko</h2>
+
+        <?php if(!empty($error_msg)): ?>
+        <div
+            style="background: #FFEBEE; color: #C62828; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px;">
+            <?= $error_msg ?>
+        </div>
+        <?php endif; ?>
+
         <form method="POST" action="">
             <div class="form-group">
                 <label>Nama Toko</label>
@@ -164,7 +174,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <hr style="margin: 25px 0; border: 0; border-top: 1px dashed #ccc;">
 
             <div class="form-group">
-                <label>Kontak Resmi (WhatsApp)</label>
+                <label>Kontak Resmi (Nomor Telepon / WA)</label>
                 <input type="text" name="kontak[telepon]"
                     value="<?= htmlspecialchars($existing_kontak['telepon'] ?? '') ?>"
                     placeholder="Contoh: 08123456789">
@@ -179,7 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label>Kontak Resmi (Website)</label>
                 <input type="text" name="kontak[website]"
                     value="<?= htmlspecialchars($existing_kontak['website'] ?? '') ?>"
-                    placeholder="Contoh: toko_kuliner.com">
+                    placeholder="Contoh: www.tokokuliner.com">
             </div>
 
             <div class="form-group">

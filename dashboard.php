@@ -2,7 +2,7 @@
 require_once 'config.php';
 if (!isset($_SESSION['admin'])) { header("Location: login.php"); exit; }
 
-// --- QUERY UTAMA: DAFTAR TOKO (Eksisting) ---
+// --- QUERY UTAMA: DAFTAR TOKO ---
 $stmt = $pdo->query("SELECT t.id_toko, t.nama_toko, j.nama_jenis, s.value_sertifikasi, 
                     (SELECT COUNT(*) FROM menu WHERE id_toko = t.id_toko) as total_menu
                     FROM toko t
@@ -11,30 +11,28 @@ $stmt = $pdo->query("SELECT t.id_toko, t.nama_toko, j.nama_jenis, s.value_sertif
                     ORDER BY t.id_toko DESC");
 $list_toko = $stmt->fetchAll();
 
-
 // ==========================================
-// --- STATISTIK CONTROL CENTER (BARU) ---
+// --- STATISTIK CONTROL CENTER ---
 // ==========================================
 
-// 1. STATISTIK JAM TERTENTU (Dinamis berdasarkan input waktu admin)
-$jam_cek = $_GET['jam_cek'] ?? date('H:i'); // default jam sekarang jika belum diinput
+// 1. STATISTIK JAM OPERASIONAL DINAMIS
+$jam_cek = $_GET['jam_cek'] ?? date('H:i'); 
 $jam_pencarian = $jam_cek . ':00';
 
 $query_jam = "SELECT t.nama_toko, jd.buka, jd.tutup,
                     (SELECT GROUP_CONCAT(m.nama_mitra SEPARATOR ', ') FROM rel_mitra rm JOIN mitra m ON rm.id_mitra = m.id_mitra WHERE rm.id_toko = t.id_toko) as mitra_links
-            FROM toko t
-            JOIN jadwal jd ON t.id_jadwal = jd.id_jadwal
-            WHERE (
-                (jd.buka <= jd.tutup AND :jam_cek1 BETWEEN jd.buka AND jd.tutup)
+                FROM toko t
+                JOIN jadwal jd ON t.id_jadwal = jd.id_jadwal
+                WHERE (
+                (jd.buka <= jd.tutup AND :jam_cek BETWEEN jd.buka AND jd.tutup)
                 OR 
-                (jd.buka > jd.tutup AND (:jam_cek2 >= jd.buka OR :jam_cek3 <= jd.tutup))
+                (jd.buka > jd.tutup AND (:jam_cek >= jd.buka OR :jam_cek <= jd.tutup))
             )";
 $stmt_jam = $pdo->prepare($query_jam);
-$stmt_jam->execute(['jam_cek1' => $jam_pencarian, 'jam_cek2' => $jam_pencarian, 'jam_cek3' => $jam_pencarian]);
+$stmt_jam->execute(['jam_cek' => $jam_pencarian]);
 $umkm_buka = $stmt_jam->fetchAll();
 
-
-// 2. STATISTIK RANGE HARGA MENU (Menghitung jumlah UMKM unik per range harga)
+// 2. STATISTIK RANGE HARGA MENU
 $ranges = [
     '0_20'      => ['label' => 'Di bawah Rp 20.000', 'cond' => 'harga <= 20000'],
     '20_40'     => ['label' => 'Rp 20.000 - Rp 40.000', 'cond' => 'harga BETWEEN 20001 AND 40000'],
@@ -49,21 +47,12 @@ foreach ($ranges as $key => $r) {
     $stat_harga[$r['label']] = $pdo->query($q)->fetchColumn();
 }
 
-
-// 3. STATISTIK MITRA PENGIRIMAN (Mencari mitra terbanyak)
-$mitra_counts = $pdo->query("SELECT m.nama_mitra, COUNT(rm.id_toko) as jumlah 
-                            FROM mitra m 
-                            LEFT JOIN rel_mitra rm ON m.id_mitra = rm.id_mitra 
-                            GROUP BY m.id_mitra 
-                            ORDER BY jumlah DESC")->fetchAll();
+// 3. STATISTIK MITRA PENGIRIMAN TOKO
+$mitra_counts = $pdo->query("SELECT m.nama_mitra, COUNT(rm.id_toko) as jumlah FROM mitra m LEFT JOIN rel_mitra rm ON m.id_mitra = rm.id_mitra GROUP BY m.id_mitra ORDER BY jumlah DESC")->fetchAll();
 $mitra_terbanyak = (!empty($mitra_counts) && $mitra_counts[0]['jumlah'] > 0) ? $mitra_counts[0]['nama_mitra'] . " (" . $mitra_counts[0]['jumlah'] . " UMKM)" : "Belum ada mitra terikat";
 
-
-// 4. STATISTIK METODE PEMBAYARAN (Mencari metode selain cash)
-$payment_counts = $pdo->query("SELECT mp.nama_metode, COUNT(rmp.id_toko) as jumlah 
-                            FROM metode_pembayaran mp 
-                            LEFT JOIN rel_metode_pembayaran rmp ON mp.id_metode = rmp.id_metode 
-                            GROUP BY mp.id_metode")->fetchAll();
+// 4. STATISTIK METODE PEMBAYARAN KONSUMEN
+$payment_counts = $pdo->query("SELECT mp.nama_metode, COUNT(rmp.id_toko) as jumlah FROM metode_pembayaran mp LEFT JOIN rel_metode_pembayaran rmp ON mp.id_metode = rmp.id_metode GROUP BY mp.id_metode")->fetchAll();
 $non_cash_list = [];
 foreach ($payment_counts as $p) {
     if (strtolower($p['nama_metode']) !== 'cash' && $p['jumlah'] > 0) {
@@ -72,19 +61,11 @@ foreach ($payment_counts as $p) {
 }
 $non_cash_info = !empty($non_cash_list) ? implode(', ', $non_cash_list) : "Tidak ada/belum diatur";
 
+// 5. STATISTIK SERTIFIKASI HALAL TOKO
+$halal_counts = $pdo->query("SELECT s.value_sertifikasi, COUNT(t.id_toko) as jumlah FROM sertifikasi_halal s LEFT JOIN toko t ON s.id_sertifikasi = t.id_sertifikasi GROUP BY s.id_sertifikasi")->fetchAll();
 
-// 5. STATISTIK SERTIFIKASI HALAL
-$halal_counts = $pdo->query("SELECT s.value_sertifikasi, COUNT(t.id_toko) as jumlah 
-                            FROM sertifikasi_halal s 
-                            LEFT JOIN toko t ON s.id_sertifikasi = t.id_sertifikasi 
-                            GROUP BY s.id_sertifikasi")->fetchAll();
-
-
-// 6. STATISTIK KATEGORI RASA (Diambil dari master kategori menu)
-$rasa_counts = $pdo->query("SELECT k.nama_kategori, COUNT(DISTINCT m.id_toko) as jumlah_umkm 
-                            FROM kategori k 
-                            LEFT JOIN menu m ON k.id_kategori = m.id_kategori 
-                            GROUP BY k.id_kategori")->fetchAll();
+// 6. STATISTIK KATEGORI RASA 
+$rasa_counts = $pdo->query("SELECT k.nama_kategori, COUNT(DISTINCT m.id_toko) as jumlah_umkm FROM kategori k LEFT JOIN menu m ON k.id_kategori = m.id_kategori GROUP BY k.id_kategori")->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -95,7 +76,75 @@ $rasa_counts = $pdo->query("SELECT k.nama_kategori, COUNT(DISTINCT m.id_toko) as
     <title>Admin Dashboard & Control Center</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/dashboard.css">
-    <style>    </style>
+    <style>
+        .control-center {
+            background: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 35px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border-left: 5px solid #667302;
+        }
+
+        .control-center h2 {
+            color: #400101;
+            font-size: 22px;
+            margin-bottom: 20px;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 15px 20px;
+        }
+
+        .stat-card h4 {
+            color: #667302;
+            font-size: 14px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+
+        .stat-card p,
+        .stat-card ul {
+            font-size: 14px;
+            color: #333;
+        }
+
+        .stat-card ul {
+            padding-left: 18px;
+        }
+
+        .btn-check {
+            background: #400101;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .badge-count {
+            background: #667302;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+    </style>
 </head>
 
 <body>
@@ -110,7 +159,6 @@ $rasa_counts = $pdo->query("SELECT k.nama_kategori, COUNT(DISTINCT m.id_toko) as
     </div>
 
     <div class="content">
-
         <div class="header-content">
             <h1>Dashboard & Control Center</h1>
             <a href="toko_form.php" class="btn-add">➕ Tambah Toko UMKM Baru</a>
@@ -120,45 +168,43 @@ $rasa_counts = $pdo->query("SELECT k.nama_kategori, COUNT(DISTINCT m.id_toko) as
             <h2>🎯 UMKM Control Center (Statistik Real-time)</h2>
 
             <div class="stat-grid">
-
                 <div class="stat-card" style="grid-column: 1 / -1;">
                     <h4>1. Status UMKM Buka Pada Jam Tertentu</h4>
-                        <form method="GET" action=""
-                            style="display:flex; gap:10px; align-items:center; margin-bottom:15px;">
-                            <span style="font-size:14px;">Masukkan Jam Uji:</span>
-                            <input type="time" name="jam_cek" value="<?= htmlspecialchars($jam_cek) ?>"
-                                style="padding:4px 8px; border-radius:4px; border:1px solid #ccc;">
-                            <button type="submit" class="btn-check">Cek Jumlah</button>
-                        </form>
-                        <p style="margin-bottom: 8px;">Total UMKM Buka pada pukul
-                            <strong><?= htmlspecialchars($jam_cek) ?> WIB</strong>: <span class="badge-count"
-                                style="font-size:14px; padding:4px 10px;"><?= count($umkm_buka) ?> Toko</span></p>
+                    <form method="GET" action=""
+                        style="display:flex; gap:10px; align-items:center; margin-bottom:15px;">
+                        <span style="font-size:14px;">Masukkan Jam Uji:</span>
+                        <input type="time" name="jam_cek" value="<?= htmlspecialchars($jam_cek) ?>"
+                            style="padding:4px 8px; border-radius:4px; border:1px solid #ccc;">
+                        <button type="submit" class="btn-check">Cek Jumlah</button>
+                    </form>
+                    <p style="margin-bottom: 8px;">Total UMKM Buka pada pukul <strong><?= htmlspecialchars($jam_cek) ?>
+                            WIB</strong>: <span class="badge-count"
+                            style="font-size:14px; padding:4px 10px;"><?= count($umkm_buka) ?> Toko</span></p>
 
-                        <?php if(!empty($umkm_buka)): ?>
-                        <details style="margin-top: 15px; cursor: pointer;">
-                            <summary style="font-size: 13px; font-weight: 600; color: #400101; margin-bottom: 8px;">
-                                ▶ Klik untuk melihat/menyembunyikan daftar nama toko
-                            </summary>
-                            <table
-                                style="width:100%; font-size:13px; border-collapse:collapse; margin-top:10px; background:#fff; border:1px solid #ddd; cursor: default;">
-                                <tr style="background:#eee; text-align:left;">
-                                    <th style="padding:8px;">Nama Toko</th>
-                                    <th style="padding:8px;">Range Operasional</th>
-                                    <th style="padding:8px;">Mitra Aktif</th>
-                                </tr>
-                                <?php foreach($umkm_buka as $ub): ?>
-                                <tr style="border-bottom:1px solid #eee;">
-                                    <td style="padding:8px;"><strong><?= htmlspecialchars($ub['nama_toko']) ?></strong>
-                                    </td>
-                                    <td style="padding:8px; color:#c62828;">🕒 <?= substr($ub['buka'],0,5) ?> -
-                                        <?= substr($ub['tutup'],0,5) ?> WIB</td>
-                                    <td style="padding:8px; color: #2e7d32; font-style:italic;">
-                                        <?= $ub['mitra_links'] ?: 'Hanya Offline (Tidak ada)' ?></td>
-                                </tr>
-                                <?php endforeach; ?>
-                            </table>
-                        </details>
-                        <?php endif; ?>
+                    <?php if(!empty($umkm_buka)): ?>
+                    <details style="margin-top: 15px; cursor: pointer;">
+                        <summary style="font-size: 13px; font-weight: 600; color: #400101; margin-bottom: 8px;">
+                            ▶ Klik untuk melihat/menyembunyikan daftar nama toko yang buka
+                        </summary>
+                        <table
+                            style="width:100%; font-size:13px; border-collapse:collapse; margin-top:10px; background:#fff; border:1px solid #ddd; cursor: default;">
+                            <tr style="background:#eee; text-align:left;">
+                                <th style="padding:8px;">Nama Toko</th>
+                                <th style="padding:8px;">Range Operasional</th>
+                                <th style="padding:8px;">Mitra Aktif</th>
+                            </tr>
+                            <?php foreach($umkm_buka as $ub): ?>
+                            <tr style="border-bottom:1px solid #eee;">
+                                <td style="padding:8px;"><strong><?= htmlspecialchars($ub['nama_toko']) ?></strong></td>
+                                <td style="padding:8px; color:#c62828;">🕒 <?= substr($ub['buka'],0,5) ?> -
+                                    <?= substr($ub['tutup'],0,5) ?> WIB</td>
+                                <td style="padding:8px; color: #2e7d32; font-style:italic;">
+                                    <?= $ub['mitra_links'] ?: 'Hanya Offline (Tidak ada)' ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </table>
+                    </details>
+                    <?php endif; ?>
                 </div>
 
                 <div class="stat-card">
@@ -172,7 +218,7 @@ $rasa_counts = $pdo->query("SELECT k.nama_kategori, COUNT(DISTINCT m.id_toko) as
 
                 <div class="stat-card">
                     <h4>3. Integrasi Mitra Eksternal</h4>
-                    <p style="margin-bottom:10px;">🏆 Mitra Paling Banyak Digunakan:<br> <strong
+                    <p style="margin-bottom:10px;">Mitra Paling Banyak Digunakan:<br> <strong
                             style="color:#2E7D32; font-size:15px;"><?= $mitra_terbanyak ?></strong></p>
                     <span style="font-size:12px; font-weight:600; color:#666;">Detail per Mitra:</span>
                     <ul style="margin-top:5px;">
@@ -189,8 +235,6 @@ $rasa_counts = $pdo->query("SELECT k.nama_kategori, COUNT(DISTINCT m.id_toko) as
                         style="background: #e8f5e9; padding: 8px; border-radius: 4px; margin: 5px 0; font-weight: bold; color: #1b5e20; font-size:13px;">
                         <?= $non_cash_info ?>
                     </p>
-                    <span style="font-size:11px; color:#777;">*Menghitung berapa banyak merchant UMKM yang mengaktifkan
-                        opsi tersebut.</span>
                 </div>
 
                 <div class="stat-card">
@@ -213,10 +257,8 @@ $rasa_counts = $pdo->query("SELECT k.nama_kategori, COUNT(DISTINCT m.id_toko) as
                         <?php endforeach; ?>
                     </ul>
                 </div>
-
             </div>
         </div>
-
 
         <h2 style="margin-bottom: 15px; color:#400101;">📋 Seluruh Entitas Toko Terdaftar (<?= count($list_toko) ?>)
         </h2>
@@ -247,8 +289,7 @@ $rasa_counts = $pdo->query("SELECT k.nama_kategori, COUNT(DISTINCT m.id_toko) as
                             Menu</a>
                         <a href="toko_form.php?id=<?= $row['id_toko'] ?>" class="btn-action btn-edit">✏️ Edit</a>
                         <a href="toko_delete.php?id=<?= $row['id_toko'] ?>" class="btn-action btn-delete"
-                            onclick="return confirm('Apakah Anda yakin ingin menghapus toko ini beserta relasi kontak, mitra, pembayaran, dan menunya?')">❌
-                            Hapus</a>
+                            onclick="return confirm('Apakah Anda yakin ingin menghapus toko ini?')">❌ Hapus</a>
                     </td>
                 </tr>
                 <?php endforeach; ?>
